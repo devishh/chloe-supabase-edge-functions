@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
         const { error: msgErr } = await db.from("chat_message").insert({
             session_id: sessionId,
             role: "assistant",
-            content: { text: messageText }
+            content: messageText
         });
 
         console.log("Message insertion result:", { hasError: !!msgErr, error: msgErr });
