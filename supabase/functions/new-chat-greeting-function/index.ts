@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         const { data: promptData, error: promptError } = await db
             .from("prompts")
             .select("content")
-            .eq("key", "greeting_new")
+            .eq("key", "system_prompt")
             .eq("is_active", true)
             .single();
 
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
         // Prepare prompt with user's preferred name if available
         const userContext = preferredName ? `User's preferred name: ${preferredName}` : "No preferred name available";
-        const fullPrompt = `${promptData.content}\n\n${userContext}`;
+        const systemPrompt = `${promptData.content}\n\n${userContext}`;
 
         // Send to GROQ
         console.log("Calling GROQ API...");
@@ -146,7 +146,11 @@ Deno.serve(async (req) => {
                 messages: [
                     {
                         role: "system",
-                        content: fullPrompt
+                        content: systemPrompt
+                    },
+                    {
+                        role: "user",
+                        content: `Start the session by greeting me warmly using my name once. Never say nice to meet you or something similar. My name is ${preferredName || "there"}`
                     }
                 ],
                 temperature: GROQ_TEMPERATURE,
@@ -169,6 +173,7 @@ Deno.serve(async (req) => {
 
         const groqData = await groqResponse.json();
         console.log("GROQ response data:", { hasChoices: !!groqData.choices, choiceCount: groqData.choices?.length });
+        console.log("GROQ raw response JSON:", JSON.stringify(groqData, null, 2));
         
         const aiResponse = groqData.choices?.[0]?.message?.content?.trim();
         console.log("AI response extracted:", { hasResponse: !!aiResponse, responseLength: aiResponse?.length });
