@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS"
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
 Deno.serve(async (req) => {
@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
         return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // Only handle GET requests
-    if (req.method !== "GET") {
+    // Only handle POST requests
+    if (req.method !== "POST") {
         console.log("Method not allowed:", req.method);
         return new Response(JSON.stringify({ error: "Method not allowed" }), {
             status: 405,
@@ -70,22 +70,14 @@ Deno.serve(async (req) => {
 
         console.log("Searching for chat session between:", todayStart.toISOString(), "and", todayEnd.toISOString());
 
-        // Get today's latest chat session with metadata
+        // Get today's latest chat session with essential metadata
         const { data: chatSession, error: sessionErr } = await db
             .from("chat_session")
             .select(`
                 id,
                 title,
-                title_updated_at,
-                model,
-                system_prompt_id,
-                summarize_prompt_id,
                 summary,
-                summary_tokens,
-                message_count,
-                last_message_at,
-                created_at,
-                updated_at
+                created_at
             `)
             .eq("user_id", userId)
             .gte("created_at", todayStart.toISOString())
@@ -120,40 +112,11 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Get the latest message for additional context
-        const { data: latestMessage, error: messageErr } = await db
-            .from("chat_message")
-            .select("id, role, content, created_at")
-            .eq("session_id", chatSession.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        console.log("Latest message query result:", { 
-            hasMessage: !!latestMessage, 
-            messageId: latestMessage?.id, 
-            error: messageErr 
-        });
-
         const response = {
             chat_session_id: chatSession.id,
             title: chatSession.title,
-            title_updated_at: chatSession.title_updated_at,
-            model: chatSession.model,
-            system_prompt_id: chatSession.system_prompt_id,
-            summarize_prompt_id: chatSession.summarize_prompt_id,
             summary: chatSession.summary,
-            summary_tokens: chatSession.summary_tokens,
-            message_count: chatSession.message_count,
-            last_message_at: chatSession.last_message_at,
-            created_at: chatSession.created_at,
-            updated_at: chatSession.updated_at,
-            latest_message: latestMessage ? {
-                id: latestMessage.id,
-                role: latestMessage.role,
-                content: latestMessage.content,
-                created_at: latestMessage.created_at
-            } : null
+            created_at: chatSession.created_at
         };
 
         // Log the response payload before returning
