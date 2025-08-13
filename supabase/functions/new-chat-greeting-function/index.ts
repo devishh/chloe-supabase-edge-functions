@@ -129,36 +129,38 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Prepare prompt with user's preferred name if available
-        const userContext = preferredName ? `User's preferred name: ${preferredName}` : "No preferred name available";
-        const systemPrompt = `${promptData.content}\n\n${userContext}`;
+        // Use pure system prompt without user context
+        const systemPrompt = promptData.content;
 
         // Send to GROQ
         console.log("Calling GROQ API...");
+        const groqRequest = {
+            model: GROQ_MODEL,
+            messages: [
+                {
+                    role: "system",
+                    content: systemPrompt
+                },
+                                    {
+                        role: "user",
+                        content: `Start the session by greeting me warmly using my name once. Never say nice to meet you or something similar. My name is ${preferredName || "there"}`
+                    }
+            ],
+            temperature: GROQ_TEMPERATURE,
+            max_completion_tokens: GROQ_MAX_TOKENS,
+            top_p: GROQ_TOP_P,
+            reasoning_effort: GROQ_REASONING_EFFORT,
+            stream: false
+        };
+        console.log("GROQ request JSON:", JSON.stringify(groqRequest, null, 2));
+        
         const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${GROQ_API_KEY}`,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                model: GROQ_MODEL,
-                messages: [
-                    {
-                        role: "system",
-                        content: systemPrompt
-                    },
-                    {
-                        role: "user",
-                        content: `Start the session by greeting me warmly using my name once. Never say nice to meet you or something similar. My name is ${preferredName || "there"}`
-                    }
-                ],
-                temperature: GROQ_TEMPERATURE,
-                max_completion_tokens: GROQ_MAX_TOKENS,
-                top_p: GROQ_TOP_P,
-                reasoning_effort: GROQ_REASONING_EFFORT,
-                stream: false
-            })
+            body: JSON.stringify(groqRequest)
         });
 
         console.log("GROQ response status:", groqResponse.status);
