@@ -191,17 +191,27 @@ Deno.serve(async (req) => {
         messageText = aiResponse;
         console.log("Message text set:", messageText.substring(0, 100) + "...");
 
-        // Insert assistant message
+        // Insert assistant message and get back generated values
         console.log("Inserting assistant message...");
-        const { error: msgErr } = await db.from("chat_message").insert({
-            session_id: sessionId,
-            role: "assistant",
-            content: messageText
+        const { data: insertedMessage, error: msgErr } = await db
+            .from("chat_message")
+            .insert({
+                session_id: sessionId,
+                role: "assistant",
+                content: messageText
+            })
+            .select("id, ordinal, created_at")
+            .single();
+
+        console.log("Message insertion result:", { 
+            hasMessage: !!insertedMessage, 
+            messageId: insertedMessage?.id, 
+            ordinal: insertedMessage?.ordinal,
+            hasError: !!msgErr, 
+            error: msgErr 
         });
 
-        console.log("Message insertion result:", { hasError: !!msgErr, error: msgErr });
-
-        if (msgErr) {
+        if (msgErr || !insertedMessage) {
             console.log("Message insertion failed:", msgErr);
             // Cleanup empty session
             try { await db.from("chat_session").delete().eq("id", sessionId); } catch (_) { }
@@ -212,10 +222,12 @@ Deno.serve(async (req) => {
         }
 
         const payload = {
-            session_id: sessionId,
-            assistant_text: messageText,
-            assistant_message_id: null,
-            name_used: preferredName
+            chat_session_id: sessionId,
+            chat_message_id: insertedMessage.id,
+            content: messageText,
+            role: "assistant",
+            ordinal: insertedMessage.ordinal as bigint,
+            created_at: insertedMessage.created_at
         };
 
         // Log the response payload before returning

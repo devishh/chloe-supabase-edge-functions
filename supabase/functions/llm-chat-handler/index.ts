@@ -29,6 +29,8 @@ interface ResponseBody {
     chat_message_id: string;
     role: "assistant";
     content: string;
+    ordinal: bigint;
+    created_at: string;
 }
 
 Deno.serve(async (req) => {
@@ -118,23 +120,31 @@ Deno.serve(async (req) => {
 
         console.log("Chat session verified, ID:", chat_session_id);
 
-        // Save user message first
+        // Save user message first and get back generated values
         console.log("Saving user message...");
-        const { error: userMsgError } = await db
+        const { data: userMessageData, error: userMsgError } = await db
             .from("chat_message")
             .insert({
                 session_id: chat_session_id,
                 role: "user",
                 content: content
-            });
+            })
+            .select("id, ordinal, created_at")
+            .single();
 
-        if (userMsgError) {
+        if (userMsgError || !userMessageData) {
             console.log("Failed to save user message:", userMsgError);
             return new Response(JSON.stringify({ error: "Failed to save user message" }), {
                 status: 500,
                 headers: { "content-type": "application/json", ...CORS_HEADERS }
             });
         }
+
+        console.log("User message saved:", { 
+            messageId: userMessageData.id, 
+            ordinal: userMessageData.ordinal,
+            createdAt: userMessageData.created_at 
+        });
 
         // Get system prompt
         console.log("Fetching system prompt...");
@@ -238,7 +248,7 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Save assistant response to chat_message table
+        // Save assistant response to chat_message table and get back generated values
         console.log("Saving assistant message to database...");
         const { data: messageData, error: msgErr } = await db
             .from("chat_message")
@@ -247,12 +257,18 @@ Deno.serve(async (req) => {
                 role: "assistant",
                 content: aiResponse
             })
-            .select("id")
+            .select("id, ordinal, created_at")
             .single();
 
-        console.log("Message insertion result:", { hasData: !!messageData, messageId: messageData?.id, error: msgErr });
+        console.log("Message insertion result:", { 
+            hasData: !!messageData, 
+            messageId: messageData?.id, 
+            ordinal: messageData?.ordinal,
+            hasError: !!msgErr, 
+            error: msgErr 
+        });
 
-        if (msgErr || !messageData?.id) {
+        if (msgErr || !messageData) {
             console.log("Message insertion failed:", msgErr);
             return new Response(JSON.stringify({ error: "Failed to save message" }), {
                 status: 500,
@@ -265,7 +281,9 @@ Deno.serve(async (req) => {
             chat_session_id: chat_session_id,
             chat_message_id: messageData.id,
             role: "assistant",
-            content: aiResponse
+            content: aiResponse,
+            ordinal: messageData.ordinal,
+            created_at: messageData.created_at
         };
 
         console.log("Response payload:", JSON.stringify(responseBody, null, 2));
