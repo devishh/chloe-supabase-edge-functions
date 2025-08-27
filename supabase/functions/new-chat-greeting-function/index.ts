@@ -197,6 +197,7 @@ Deno.serve(async (req) => {
             .from("chat_message")
             .insert({
                 session_id: sessionId,
+                user_id: userId,
                 role: "assistant",
                 content: messageText
             })
