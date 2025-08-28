@@ -18,7 +18,6 @@ const GROQ_REASONING_EFFORT = "medium";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // User Greeting Configuration
-const GREETING_MESSAGE_TEMPLATE = "I am back in the chat. Please pick up the conversation where we left off and greet me warmly using my name once. My name is {name}";
 const DEFAULT_NAME_FALLBACK = "there";
 
 // Environment Variables
@@ -203,14 +202,14 @@ Deno.serve(async (req) => {
                 role: "system",
                 content: systemPrompt
             },
+            {
+                role: "system",
+                content: `The user has returned to the chat. Greet them warmly by name once and pick up the conversation where you left off. The user's name is ${preferredName || DEFAULT_NAME_FALLBACK}.`
+            },
             ...(dbMessages || []).map(msg => ({
                 role: msg.role,
                 content: msg.content
-            })),
-            {
-                role: "user",
-                content: GREETING_MESSAGE_TEMPLATE.replace("{name}", preferredName || DEFAULT_NAME_FALLBACK)
-            }
+            }))
         ];
 
         console.log("GROQ messages:", JSON.stringify(groqMessages, null, 2));

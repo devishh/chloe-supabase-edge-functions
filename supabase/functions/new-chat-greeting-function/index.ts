@@ -141,10 +141,10 @@ Deno.serve(async (req) => {
                     role: "system",
                     content: systemPrompt
                 },
-                                    {
-                        role: "user",
-                        content: `Start the session by greeting me warmly using my name once. Never say nice to meet you or something similar. My name is ${preferredName || "there"}`
-                    }
+                {
+                    role: "system",
+                    content: `This is a new session. Greet the user warmly by name once. Never say nice to meet you or something similar. The user's name is ${preferredName || "there"}.`
+                }
             ],
             temperature: GROQ_TEMPERATURE,
             max_completion_tokens: GROQ_MAX_TOKENS,
