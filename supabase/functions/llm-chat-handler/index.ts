@@ -7,9 +7,9 @@ const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 
 // GROQ Configuration
 const GROQ_MODEL = "openai/gpt-oss-120b";
-const GROQ_TEMPERATURE = 0.8;
-const GROQ_MAX_TOKENS = 180;
-const GROQ_TOP_P = 0.9;
+const GROQ_TEMPERATURE = 1.0;
+const GROQ_MAX_TOKENS = 350;
+const GROQ_TOP_P = 1.0;
 const GROQ_REASONING_EFFORT = "medium";
 
 const CORS_HEADERS = {
