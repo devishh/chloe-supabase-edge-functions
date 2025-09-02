@@ -113,11 +113,11 @@ Deno.serve(async (req) => {
             .eq("is_active", true)
             .single();
 
-        // Get journey-specific and user-specific prompts
+        // Get journey-specific prompts
         const { data: promptsData, error: promptsError } = await db
             .from("prompts")
             .select("key, content")
-            .in("key", [journeyData.journey_key, `${journeyData.journey_key}_user`])
+            .eq("key", journeyData.journey_key)
             .eq("is_active", true);
 
         if (promptsError || !promptsData || promptsData.length === 0) {
@@ -127,9 +127,8 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Find the journey prompt and user prompt
+        // Find the journey prompt
         const journeyPrompt = promptsData.find(p => p.key === journeyData.journey_key);
-        const userPrompt = promptsData.find(p => p.key === `${journeyData.journey_key}_user`);
 
         if (!journeyPrompt?.content) {
             return new Response(JSON.stringify({ error: `Journey prompt not found for: ${journeyData.journey_key}` }), {
@@ -145,10 +144,6 @@ Deno.serve(async (req) => {
                 {
                     role: "system",
                     content: journeyPrompt.content
-                },
-                {
-                    role: "user",
-                    content: userPrompt?.content
                 }
             ],
             temperature: GROQ_TEMPERATURE,
